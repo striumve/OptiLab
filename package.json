@@ -12,6 +12,8 @@
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
+    "katex": "^0.19.1",
+    "markdown-it": "^15.0.3",
     "three": "^0.180.0",
     "vite": "^7.1.0"
   },

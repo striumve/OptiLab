@@ -62,6 +62,12 @@ AI 请求将实验资料和相关上下文发送至当前配置的服务商。�
 
 实现参考：[Chat Completions 官方文档](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)、[Responses 官方文档](https://developers.openai.com/api/reference/resources/responses/methods/create)。
 
+## AI 回复排版
+
+预习、学习问答、结果解读、报告检查、实验台助教及连接测试回复统一支持 Markdown：标题、粗体、列表、引用、表格、链接和代码块。公式使用 KaTeX 本地排版，支持行内 `$...$` / `\(...\)`、块级 `$$...$$` / `\[...\]`，以及 math / latex / tex 围栏。公式字体随应用打包，无需外部 CDN。
+
+不支持或不完整的公式保留原文；代码中的公式不会误渲染。原始回复仍以文本保存，旧记录刷新后自动使用新排版。渲染关闭原始 HTML，不执行模型返回的脚本或自动加载外部图片。开发时可访问 `/tests/rich-text.html` 检查宽窄面板的排版。
+
 ## 数据分析方法
 
 导入 UTF-8 CSV/TSV（最多 5000 行、2 MB），支持引号字段、科学计数法、BOM、`#` 注释。必须有唯一的非空表头。空白或非数值会标出行号，不静默删点。数值须符合界面显示的单位；列名不触发隐式单位换算。

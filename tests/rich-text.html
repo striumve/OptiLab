@@ -1,0 +1,44 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OptiLab 回复排版验证</title></head><body><div class="study-overlay" style="overflow:auto;padding:24px"><h1 style="font-size:22px">AI 回复排版验证</h1><p>共享渲染器 · 宽面板与实验台窄面板</p><div style="display:grid;grid-template-columns:minmax(300px,1fr) 340px;gap:20px;align-items:start"><section class="study-card"><div id="wide" class="ai-text rich-text"></div></section><aside id="narrow"><article class="chat-message assistant"><small>排版测试 · 不调用模型</small><div id="chat" class="rich-text"></div></article></aside></div></div><script type="module">
+import {renderRichText} from '/src/rich-text.js';
+import '/src/learning.css';
+import 'katex/dist/katex.min.css';
+import '/src/rich-text.css';
+const content=String.raw`## 薄透镜成像
+
+**已知条件：** 物距为 \(u=40\,\mathrm{cm}\)，焦距为 $f=15\,\mathrm{cm}$。
+
+由薄透镜公式：
+
+\[
+\frac{1}{f}=\frac{1}{u}+\frac{1}{v}
+\]
+
+1. 代入实验参数。
+2. 移动观察屏至像面。
+
+$$v=\frac{fu}{u-f}=\frac{15\times40}{40-15}=24\,\mathrm{cm}$$
+
+| 变量 | 数值 | 单位 |
+| --- | --- | --- |
+| 物距 | 40 | cm |
+| 像距 | 24 | cm |
+
+> 注意：理论像距不等同于真实测量结果。
+
+### 偏振与接收带宽
+
+\[
+\begin{aligned}
+I &= I_0\cos^2(\theta_2-\theta_1) \\
+f_c &= \frac{1}{2\pi R_L C}
+\end{aligned}
+\]
+
+代码保持原样：
+
+\`v = f * u / (u - f)\`
+`;
+// Backticks in the fixture are escaped to keep the template literal readable.
+const text=content.replaceAll('\\`','`');
+document.querySelector('#wide').innerHTML=renderRichText(text);document.querySelector('#chat').innerHTML=renderRichText(text);
+</script></body></html>
