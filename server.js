@@ -3,10 +3,12 @@ import {readFile,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createAssistantHandler} from './server/assistant.js';
+import {createAISettingsStore} from './server/ai-settings.js';
 const root=path.dirname(fileURLToPath(import.meta.url));
 try { process.loadEnvFile(path.join(root,'.env')); } catch(e) { if(e.code!=='ENOENT')throw e; }
 const production=process.argv.includes('--production');
-const api=createAssistantHandler();
+const settings=createAISettingsStore({filePath:process.env.OPTILAB_SETTINGS_PATH||path.join(root,'.local','ai-settings.json')});
+const api=createAssistantHandler({settings});
 const vite=production?null:await (await import('vite')).createServer({root,server:{middlewareMode:true},appType:'spa'});
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
 const server=http.createServer(async(req,res)=>{
@@ -14,6 +16,7 @@ const server=http.createServer(async(req,res)=>{
   const host=req.headers.host||'';
   if(!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)){res.writeHead(403).end('Local access only');return;}
   const url=new URL(req.url,'http://'+host);
+  const segments=decodeURIComponent(url.pathname).split('/');if(segments.some(p=>p==='.local'||p==='.git'||p.startsWith('.env'))){res.writeHead(404).end();return;}
   if(url.pathname.startsWith('/api/')){await api(req,res);return;}
   if(vite){vite.middlewares(req,res);return;}
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405).end();return;}

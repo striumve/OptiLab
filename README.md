@@ -31,27 +31,36 @@ npm run smoke    # 构建后验证生产 HTTP 服务（临时端口，不调用�
 5. 查看计算结果、拟合曲线和残差。可请求 AI 解读结果与提出待验证的误差假设。
 6. 在报告页生成含实际计算摘要的提纲，补写真实过程和结论。运行本地结构检查或 AI 检查，导出 Markdown、图表、拟合数据和计算摘要。
 
-## 配置 AI
+## 应用设置与第三方 AI
 
-将 `.env.example` 复制为 `.env`，填写：
+在学习工作台或实验台点击「应用设置 → AI 服务」：
 
-```dotenv
-OPENAI_API_KEY=你的平台API密钥
-OPENAI_MODEL=你的API账户可用的Responses模型ID
-PORT=5180
-```
+1. 填写服务商名称、模型 ID、API 服务商地址（Base URL）与 API Key。
+2. 按服务商支持情况选择 **OpenAI 兼容 Chat Completions** 或 **Responses**。
+3. 点击「保存并启用」，即时生效，无需重启。可点击「测试连接」发送简短测试消息。
 
-重新启动后，在「AI 设置」刷新状态。不要将密钥放入 `VITE_*` 环境变量或浏览器。
+地址示例：
 
-- 通过 Node 后端调用 OpenAI Responses API，密钥只从服务端环境读取。配置文件被 Git 忽略。
-- 选择新实验时自动生成预习；答疑、结果解读和报告检查由用户按钮触发。
-- AI 请求包含该实验的内置资料、当前场景（若匹配）、分析摘要、数据来源和相关对话/正文。不要上传不必要的个人信息。
-- 原始 CSV 留在浏览器。AI 分析摘要包含最多前 100 组观测和计算结果，超过时标记截断。数值拟合对全部有效行进行。
-- 无密钥时，内置指导、资料检索、本地绘图计算和规则检查可用，**不会伪装成 AI 回答**。
-- 接口设置 `store:false`，不创建服务端会话日志。模型服务仍受提供商的数据政策约束。
-- 真实模型调用需要用户自己的 API 权限、可用模型、网络及额度；仓库测试使用模拟响应，不消耗模型额度。
+- 基础地址 `https://your-provider.example/v1` → Chat Completions 请求 `https://your-provider.example/v1/chat/completions`。
+- 本地兼容服务可填 `http://localhost:11434/v1`（模型和端口按本机服务实际配置）。
+- 也接受完整 `/chat/completions` 或 `/responses` 端点，会规整为基础地址；界面展示最终请求地址。
 
-实现参考：[Responses API 官方文档](https://developers.openai.com/api/reference/resources/responses/methods/create)、[迁移与会话状态说明](https://developers.openai.com/api/docs/guides/migrate-to-responses)。
+密钥在首次填写后只发送给本机后端，保存于项目的 .local/ai-settings.json，浏览器不回显、不存储密钥，实验备份也不包含密钥。此文件为本机明文配置，已被 Git 忽略且不提供网页访问。更换服务地址需要重新填写密钥，避免把原服务的密钥发送给新服务。远程服务使用 HTTPS，本机 localhost / 127.0.0.1 可使用 HTTP 并支持免密本地模型。
+
+「恢复环境配置」清除应用内保存的 AI 配置并回到 .env。环境变量仍可用于启动配置：
+
+OPENAI_API_KEY、OPENAI_MODEL 保留兼容；AI_BASE_URL、AI_PROTOCOL、AI_MODEL、AI_API_KEY、AI_PROVIDER 可指定第三方。应用设置优先于环境变量。不要使用 VITE_* 变量存放密钥。
+
+实验台右上方工具栏提供「AI 助教」，无需离开场景即可提问：
+
+- 自动附带当前实验、选中仪器、器件参数和仿真读数。
+- 若有匹配的实验记录，会同时附带已计算的数据摘要并共享对话；自由实验对话单独保存于浏览器。
+- 内置「当前光路」「仪器用法」快捷问题；未配置 AI 时可查询内置指导，明确标注来源。
+- 每次进入实验台默认展开「实验模块与仪器」面板；仍可手动收起，专注模式可隐藏全部面板。
+
+AI 请求将实验资料和相关上下文发送至当前配置的服务商。原始 CSV 留在浏览器，分析摘要最多附前 100 组观测（其余行仍全部参与本地拟合）。Responses 请求设置 store:false；第三方数据保留策略以其规则为准。测试使用模拟响应，不调用真实付费服务。
+
+实现参考：[Chat Completions 官方文档](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)、[Responses 官方文档](https://developers.openai.com/api/reference/resources/responses/methods/create)。
 
 ## 数据分析方法
 
@@ -95,7 +104,8 @@ PORT=5180
 ## 工程结构
 
 - `server.js`：本机 HTTP、开发与生产静态服务。
-- `server/assistant.js`：AI 请求、上下文、限长、同源校验及错误处理。
+- `server/assistant.js`：AI 请求、两种协议、上下文、同源校验及错误处理。
+- `server/ai-settings.js` / `src/ai-settings.js`：应用内 AI 设置、持久化与连接测试。
 - `src/learning.js` / `src/learning.css`：学习工作台与实验记录交互。
 - `src/curriculum.js`：内置实验指导和仪器手册。
 - `src/analysis.js`：解析、拟合、统计与报告规则检查。
