@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {listenWithFallback} from './server/listen.js';
 import {readFile,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -29,7 +30,14 @@ const server=http.createServer(async(req,res)=>{
   const body=await readFile(file);res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream','X-Content-Type-Options':'nosniff','Cache-Control':'no-cache'});res.end(req.method==='HEAD'?undefined:body);
  }catch{res.writeHead(500,{'Content-Type':'application/json'}).end(JSON.stringify({error:'服务暂时不可用'}))}
 });
-const port=Number(process.env.PORT||5180);
-server.listen(port,'127.0.0.1',()=>console.log(`OptiLab ${production?'production':'development'} · http://127.0.0.1:${server.address().port}/`));
-server.on('error',e=>{console.error(e.code==='EADDRINUSE'?`端口 ${port} 已占用，请在 .env 中设置 PORT。`:e.message);process.exitCode=1;vite?.close()});
+try{
+ const port=await listenWithFallback(server,{port:Number(process.env.PORT||5180),onRetry:({port,code,nextPort})=>console.warn('端口 '+port+(code==='EACCES'?' 被系统禁止绑定':' 已被占用')+'，自动尝试 '+(nextPort||'系统分配的空闲端口')+'。')});
+ const url='http://127.0.0.1:'+port+'/';
+ console.log('OptiLab '+(production?'production':'development')+' · '+url);
+ if(process.send)process.send({type:'ready',url});
+}catch(error){
+ console.error('启动失败：'+error.message);process.exitCode=1;await vite?.close();
+ if(process.send)process.send({type:'startup-error',message:error.message});
+ if(process.connected)process.disconnect();
+}
 for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>{server.close();vite?.close();});
