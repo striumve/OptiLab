@@ -43,7 +43,7 @@ for(const protocol of ['responses','chat-completions']){
   const responses=protocol==='responses';
   const choice=(delta,finish_reason)=>({choices:[{delta,finish_reason}]});
   const first=frame(responses?{type:'response.reasoning_text.delta',delta:'hidden'}:choice({reasoning_content:'hidden'}))
-   +frame(responses?textDelta('薄透镜'):choice({content:'薄透镜'}));
+   +(responses?'event: response.output_text.delta\r\n'+frame({delta:'薄透镜'}):frame(choice({content:'薄透镜'})));
   const final=frame(responses?textDelta('公式'):choice({content:'公式'},'stop'))
    +(responses?frame(completed):'data: [DONE]\r\n\r\n');
   const stream=new ReadableStream({async start(controller){
@@ -55,15 +55,20 @@ for(const protocol of ['responses','chat-completions']){
    controller.close();
   }});
   const handler=createAssistantHandler({
-   env:{...responsesEnv,AI_PROTOCOL:protocol},
-   fetchImpl:async(_url,options)=>{
-    assert.equal(JSON.parse(options.body).stream,true);
+   env:{AI_API_KEY:'test',AI_PROTOCOL:protocol},
+   fetchImpl:async(url,options)=>{
+    const payload=JSON.parse(options.body);
+    assert.equal(url,'https://api.deepseek.com/'+(responses?'responses':'chat/completions'));
+    assert.equal(options.headers.Accept,'text/event-stream');
+    assert.equal(payload.model,'deepseek-flash');
+    assert.equal(payload.stream,true);
+    assert.deepEqual(responses?payload.reasoning:payload.thinking,responses?{effort:'none'}:{type:'disabled'});
     return upstream(stream);
    }
   });
   mockBrowser(t,handler);
   const previews=[];
-  const reply=requestAI('/api/assist',prompt,text=>{previews.push(text);received(text)});
+  const reply=requestAI('/api/assist',{...prompt,task:'chat'},text=>{previews.push(text);received(text)});
   try{assert.equal(await Promise.race([firstDelta,reply]),'薄透镜');}
   finally{release();}
   assert.equal((await reply).answer,'薄透镜公式');

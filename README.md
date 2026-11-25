@@ -40,9 +40,9 @@ npm run smoke
 
 在学习工作台或实验台点击「应用设置 → AI 服务」：
 
-1. 填写服务商名称、模型 ID、API 服务商地址（Base URL）与 API Key。
-2. 按服务商支持情况选择 **OpenAI 兼容 Chat Completions** 或 **Responses**。
-3. 点击「保存并启用」，即时生效，无需重启。可点击「测试连接」发送简短测试消息。
+1. 默认使用 **DeepSeek**，已填好服务地址 `https://api.deepseek.com`、模型 `deepseek-flash` 和 **Responses** 协议。只需填写 DeepSeek API Key。
+2. 使用第三方服务时，可修改服务地址和模型，并选择服务商支持的 **Chat Completions** 或 **Responses**。
+3. 点击「保存并启用」，即时生效，无需重启。可点击「测试连接」发送简短测试消息。DeepSeek 正文默认边生成边显示。
 
 地址示例：
 

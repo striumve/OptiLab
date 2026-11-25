@@ -43,8 +43,8 @@ export async function callProvider(config,{system,messages,maxTokens=4000,direct
    ? {model:config.model,store:false,instructions:requestInstructions,input:messages,max_output_tokens:limit}
    : {model:config.model,messages:[{role:'system',content:requestInstructions},...messages],max_tokens:limit,stream:false};
   if(onEvent)body.stream=true;
-  // DeepSeek enables reasoning by default, which can consume the entire output limit.
-  if(nativeDeepSeek&&directAnswer){
+  // DeepSeek's default thinking phase sends no visible answer and consumes output tokens.
+  if(nativeDeepSeek){
    if(responses)body.reasoning={effort:'none'};
    else body.thinking={type:'disabled'};
   }
@@ -54,11 +54,11 @@ export async function callProvider(config,{system,messages,maxTokens=4000,direct
   try{
    const response=await fetchImpl(endpoint,{
     method:'POST',redirect:'error',
-    headers:{...(config.apiKey?{'Authorization':`Bearer ${config.apiKey}`}:{}),'Content-Type':'application/json'},
+    headers:{...(config.apiKey?{'Authorization':`Bearer ${config.apiKey}`}:{}),'Content-Type':'application/json',...(onEvent?{Accept:'text/event-stream'}:{})},
     signal:clientSignal?AbortSignal.any([requestSignal,clientSignal]):requestSignal,body:JSON.stringify(body)
    });
    if(!response.ok)throw Error(response.status===401||response.status===403?'AI 服务认证失败，请在应用设置中检查密钥和权限。':response.status===429?'AI 服务额度或频率受限，请稍后再试。':response.status===404?'AI 接口或模型不存在，请检查服务地址、协议及模型 ID。':`AI 服务请求失败（HTTP ${response.status}），请检查应用设置。`);
-   if(onEvent&&response.headers?.get('content-type')?.includes('text/event-stream')){
+   if(onEvent&&response.headers?.get('content-type')?.toLowerCase().includes('text/event-stream')){
     timer.refresh();
     return await readProviderStream(response.body,responses,onEvent,readReply,()=>timer.refresh());
    }

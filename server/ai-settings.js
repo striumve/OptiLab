@@ -1,5 +1,6 @@
 import {readFile,mkdir,writeFile,rename,unlink} from 'node:fs/promises';
 import path from 'node:path';
+import {deepSeekDefaults} from '../src/ai-defaults.js';
 export function normalizeBaseUrl(value){
  let u;try{u=new URL(String(value||'').trim())}catch{throw Error('请输入有效的 API 服务地址')}
  const local=['localhost','127.0.0.1','[::1]'].includes(u.hostname);
@@ -11,12 +12,28 @@ export function normalizeBaseUrl(value){
 export const endpointFor=c=>c.baseUrl+(c.protocol==='responses'?'/responses':'/chat/completions');
 export const isConfigured=c=>!!(c.model&&(c.apiKey||['localhost','127.0.0.1','[::1]'].includes(new URL(c.baseUrl).hostname)));
 export function createAISettingsStore({env=process.env,filePath}={}){
- const environment=()=>({provider:env.AI_PROVIDER||'OpenAI',baseUrl:normalizeBaseUrl(env.AI_BASE_URL||env.OPENAI_BASE_URL||'https://api.openai.com/v1'),protocol:env.AI_PROTOCOL||'responses',model:env.AI_MODEL||env.OPENAI_MODEL||'',apiKey:env.AI_API_KEY||env.OPENAI_API_KEY||''});
+ function environment(){
+  const legacyConfigured=Boolean(env.OPENAI_BASE_URL||env.OPENAI_MODEL||env.OPENAI_API_KEY);
+  const legacyBase=env.OPENAI_BASE_URL||'https://api.openai.com/v1';
+  const useLegacyDefaults=legacyConfigured&&!env.AI_API_KEY;
+  const baseUrl=normalizeBaseUrl(env.AI_BASE_URL||(useLegacyDefaults?legacyBase:deepSeekDefaults.baseUrl));
+  const host=new URL(baseUrl).hostname;
+  const deepSeek=host==='api.deepseek.com';
+  const legacy=legacyConfigured&&baseUrl===normalizeBaseUrl(legacyBase);
+  return {
+   provider:env.AI_PROVIDER||(deepSeek?deepSeekDefaults.provider:host==='api.openai.com'?'OpenAI':'自定义服务'),
+   baseUrl,
+   protocol:env.AI_PROTOCOL||deepSeekDefaults.protocol,
+   model:env.AI_MODEL||(legacy&&env.OPENAI_MODEL)||(deepSeek?deepSeekDefaults.model:''),
+   apiKey:env.AI_API_KEY||(legacy&&env.OPENAI_API_KEY)||''
+  };
+ }
  let saved=null,loaded=false;let queue=Promise.resolve();
  async function get(){if(!loaded){if(filePath){try{const value=JSON.parse(await readFile(filePath,'utf8'));saved=validate(value,null)}catch(e){if(e.code!=='ENOENT')throw Error('本地 AI 设置读取失败，请检查 .local/ai-settings.json')}}loaded=true}return saved?{...saved}:environment()}
  function validate(data,previous){
   if(!data||typeof data!=='object')throw Error('AI 设置格式无效');
-  const baseUrl=normalizeBaseUrl(data.baseUrl),protocol=data.protocol||'chat-completions';
+  const baseUrl=normalizeBaseUrl(data.baseUrl);
+  const protocol=data.protocol||(new URL(baseUrl).hostname==='api.deepseek.com'?deepSeekDefaults.protocol:'chat-completions');
   if(!['responses','chat-completions'].includes(protocol))throw Error('请选择 Responses 或 Chat Completions 协议');
   const model=String(data.model||'').trim(),provider=String(data.provider||'自定义服务').trim();
   if(model.length>200||provider.length>80||!model||/[\r\n]/.test(model))throw Error('请填写有效的模型 ID（最多 200 字符）');
