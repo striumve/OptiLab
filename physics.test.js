@@ -17,3 +17,18 @@ test('free mode infers model, transverse movement disconnects receiver',()=>{con
 test('bandwidth decreases amplitude and delays phase at higher frequencies',()=>{const b=setup('bandwidth'),g=b.find(a=>a.type==='generator');g.frequency=1;const low=measure(b,{mode:'bandwidth'});g.frequency=1000;const high=measure(b,{mode:'bandwidth'});assert.ok(high.peak<low.peak);assert.ok(high.response.phase<low.response.phase);const off=measure(b,{mode:'bandwidth',playing:false});assert.equal(off.peak,0);assert.equal(off.response.current,0)});
 test('changing optical power and responsivity changes detector output',()=>{const b=setup('detector'),d=b.find(a=>a.type==='detector');const a=measure(b,{mode:'detector',power:.5});d.responsivity*=2;const c=measure(b,{mode:'detector',power:.5});assert.ok(Math.abs(c.response.voltage-2*a.response.voltage)<1e-12)});
 
+
+import {wavelengthColor} from './src/spectrum.js';
+test('visible spectrum colors remain bounded and do not jump between adjacent nanometers',()=>{
+ const rgb=nm=>wavelengthColor(nm).slice(1).match(/../g).map(channel=>parseInt(channel,16));
+ for(let nm=380;nm<=750;nm++){
+  assert.match(wavelengthColor(nm),/^#[\da-f]{6}$/);
+  if(nm>380)assert.ok(rgb(nm).every((channel,i)=>Math.abs(channel-rgb(nm-1)[i])<=6),nm+' nm');
+ }
+ const [red,green,blue]=[450,532,650].map(rgb);
+ assert.ok(red[2]>red[0]&&red[2]>red[1]);
+ assert.ok(green[1]>green[0]&&green[1]>green[2]);
+ assert.ok(blue[0]>blue[1]&&blue[0]>blue[2]);
+ assert.equal(wavelengthColor(350),wavelengthColor(380));
+ assert.equal(wavelengthColor(800),wavelengthColor(750));
+});
